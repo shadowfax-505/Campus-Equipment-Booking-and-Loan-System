@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: campus_equipment
+      POSTGRES_USER: campus
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-campus}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campus -d campus_equipment"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/campus_equipment
+      DB_USERNAME: campus
+      DB_PASSWORD: ${DB_PASSWORD:-campus}
+      JWT_SECRET: ${JWT_SECRET:-replace-this-with-a-long-random-secret-of-at-least-32-bytes}
+      CAMPUS_TIMEZONE: ${CAMPUS_TIMEZONE:-UTC}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@campus.edu}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin12345}
+      CORS_ORIGINS: http://localhost:3000
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-log}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-dev-webhook-secret}
+      PAYMENT_CURRENCY: ${PAYMENT_CURRENCY:-USD}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  db-data:
